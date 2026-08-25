@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STIV-MÉTÉO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b0b0d;
+    --surface:#17181c;
+    --surface-2:#1e2024;
+    --border:#2a2b30;
+    --text:#f3f3f1;
+    --text-muted:#94959a;
+    --red:#e2233c;
+    --red-dim:rgba(226,35,60,.18);
+    --radius:10px;
+    --radius-sm:6px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{max-width:640px;margin:0 auto;padding:0 0 70px;}
+
+  /* -- Header -- */
+  header.hero{padding:44px 20px 30px;}
+  .wordmark{display:flex;align-items:center;gap:10px;}
+  .wordmark__mark{color:var(--red);font-size:18px;line-height:1;}
+  .wordmark__text{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:40px;letter-spacing:.03em;text-transform:uppercase;}
+  .hero__desc{margin:16px 0 0;color:var(--text-muted);font-size:15px;max-width:54ch;}
+  .hero__thanks{margin:12px 0 0;color:var(--red);font-size:13px;font-weight:500;}
+
+  /* -- Séparateurs -- */
+  .divider{display:flex;align-items:center;gap:10px;margin:38px 20px 4px;}
+  .divider__line{flex:1;height:1px;background:var(--border);}
+  .divider__mark{color:var(--red);font-size:10px;}
+  .section-title{font-family:'Barlow Condensed',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-size:19px;margin:6px 20px 16px;}
+
+  /* -- Grille 2x2 (constat d'hier / archive) -- */
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 20px 16px;}
+  .img-cell{aspect-ratio:1/1;border-radius:var(--radius-sm);overflow:hidden;background:var(--surface-2);}
+  .img-cell img{width:100%;height:100%;object-fit:cover;display:block;}
+
+  /* -- Cartes texte / résumés -- */
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin:0 20px 16px;font-size:14.5px;white-space:pre-wrap;}
+  .card--empty{color:var(--text-muted);font-style:italic;}
+
+  /* -- Grandes images (radar / vigilance / prévisions) -- */
+  .media{position:relative;margin:0 20px 10px;border-radius:var(--radius);overflow:hidden;background:var(--surface-2);}
+  .media img{width:100%;height:auto;display:block;}
+  .media--empty{aspect-ratio:16/9;}
+  .media__tag{position:absolute;top:10px;left:10px;background:rgba(11,11,13,.78);color:var(--red);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border-radius:4px;border:1px solid var(--red-dim);}
+
+  .timestamp{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);margin:0 20px 22px;}
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--red);margin:0 20px 8px;}
+
+  /* -- Pile d'images prévisions 3 jours -- */
+  .stack{display:flex;flex-direction:column;gap:10px;margin:0 20px 16px;}
+  .stack .media{margin:0;}
+  .stack .media--empty{aspect-ratio:16/10;}
+
+  /* -- Cartes prévisions par jour -- */
+  .forecast-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--red);border-radius:var(--radius);padding:14px 16px;margin:0 20px 12px;}
+  .forecast-card__date{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--red);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;}
+  .forecast-card__text{font-size:14.5px;white-space:pre-wrap;}
+
+  /* -- Archive -- */
+  .archive-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 20px 8px;}
+  .archive-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px 14px;text-align:center;color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:17px;text-transform:uppercase;letter-spacing:.03em;cursor:pointer;transition:border-color .15s;}
+  .archive-card:hover,.archive-card:focus-visible{border-color:var(--red);}
+
+  :focus-visible{outline:2px solid var(--red);outline-offset:2px;}
+
+  /* -- Modale archive -- */
+  .modal-overlay{position:fixed;inset:0;background:rgba(5,5,6,.85);display:flex;justify-content:center;padding:24px 16px;overflow-y:auto;z-index:50;}
+  .modal-overlay[hidden]{display:none;}
+  .modal{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);max-width:560px;width:100%;padding:26px 20px 30px;position:relative;margin:20px auto;height:fit-content;}
+  .modal__close{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--text-muted);font-size:24px;cursor:pointer;line-height:1;padding:4px;}
+  .modal__close:hover{color:var(--red);}
+  .modal__title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:26px;text-transform:uppercase;margin:0 0 20px;padding-right:24px;}
+  .modal .card{margin:0 0 12px;}
+  .modal .grid-2{margin:4px 0 0;}
+
+  @media (prefers-reduced-motion: reduce){ * { transition:none !important; } }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <header class="hero">
+    <div class="wordmark">
+      <span class="wordmark__mark">▲</span>
+      <span class="wordmark__text">STIV-MÉTÉO</span>
+    </div>
+    <p class="hero__desc" id="hero-desc"></p>
+    <p class="hero__thanks" id="hero-thanks"></p>
+  </header>
+
+  <div class="divider"><span class="divider__line"></span><span class="divider__mark">▲</span><span class="divider__line"></span></div>
+  <h2 class="section-title">Constat de la journée d'hier</h2>
+  <div class="grid-2" id="grid-yesterday"></div>
+  <div class="card" id="summary-yesterday"></div>
+
+  <div class="divider"><span class="divider__line"></span><span class="divider__mark">▲</span><span class="divider__line"></span></div>
+  <h2 class="section-title">Météo d'aujourd'hui</h2>
+  <div class="media" id="media-radar"></div>
+  <p class="timestamp" id="radar-updated"></p>
+  <div class="card" id="summary-today"></div>
+  <p class="eyebrow">Carte vigilance</p>
+  <div class="media" id="media-vigilance" style="margin-bottom:24px;"></div>
+
+  <h2 class="section-title">Prévisions pour 3 jours</h2>
+  <div class="stack" id="stack-forecast"></div>
+  <div id="forecast-cards"></div>
+
+  <div class="divider"><span class="divider__line"></span><span class="divider__mark">▲</span><span class="divider__line"></span></div>
+  <h2 class="section-title">Archive météo extrême</h2>
+  <div class="archive-grid" id="archive-grid"></div>
+
+</div>
+
+<div class="modal-overlay" id="modal-overlay" hidden>
+  <div class="modal">
+    <button class="modal__close" id="modal-close" aria-label="Fermer">×</button>
+    <h3 class="modal__title" id="modal-title"></h3>
+    <div id="modal-texts"></div>
+    <div class="grid-2" id="modal-images"></div>
+  </div>
+</div>
+
+<script>
+/* ================================================================
+   STIV-MÉTÉO — GUIDE DE MISE À JOUR
+   Ne touche QUE les valeurs à l'intérieur de CONFIG ci-dessous.
+
+   - Pour une image : colle le lien direct de l'image entre les
+     guillemets "". Laisse "" (vide) si tu n'as pas d'image :
+     la case s'affichera simplement en gris, sans icône.
+   - Pour un texte : écris ce que tu veux entre les guillemets,
+     aussi long que tu veux (les retours à la ligne sont gardés).
+   - Pour ajouter un mois dans les archives : duplique un bloc
+     { label: "...", texts: [...], images: [...] } dans
+     archive.months et change le label (ex: "Septembre 2026").
+     Le nouveau mois s'ajoute automatiquement dans la grille.
+   Ne touche pas au reste du code plus bas sauf si tu sais ce
+   que tu fais.
+================================================================ */
+
+const CONFIG = {
+
+  header: {
+    description: "STIV-MÉTÉO est un site météo local d'Étival, pensé avant tout pour suivre les épisodes de gros orages. Mis à jour au minimum une fois par jour, et plusieurs fois lors des journées instables.",
+    thanks: "Merci à vous de consulter cette page !"
+  },
+
+  yesterday: {
+    // jusqu'à 4 images, une par case
+    images: ["", "", "", ""],
+    summary: ""
+  },
+
+  today: {
+    radarImage: "",
+    radarUpdated: "Mis à jour le 25/08 à 19h",
+    summary: "sera mis à jour demain !",
+    vigilanceImage: ""
+  },
+
+  forecast3days: {
+    // 3 images, l'une en dessous de l'autre
+    images: ["https://i.postimg.cc/XYYTHXR9/Screenshot-20260825-183901-My-Files.jpg", "https://i.postimg.cc/0yXhLPxj/Screenshot-20260825-183907-My-Files.jpg", "https://i.postimg.cc/MpLr95bk/Screenshot-20260825-183911-My-Files.jpg"],
+    days: [
+      { date: "Prévisions pour demain 26/08", text: "Journée chaude et progressivement instable, avec environ 16 à 18 °C le matin et 26 à 28 °C l’après-midi. Le risque d’averses et d’orages augmentera surtout durant l’après-midi et la soirée, avec une probabilité estimative de 40 à 60 % d’orage sur le secteur. Sous une cellule active, les précipitations pourraient atteindre 10 à 25 mm en quelques heures, avec des intensités ponctuelles de 15 à 30 mm/h. Les rafales pourraient généralement rester autour de 40 à 60 km/h, mais atteindre ponctuellement 60 à 80 km/h lors d’un orage plus organisé. Un risque de grêle de 1 à 3 cm ne peut pas être totalement écarté. L’activité devrait progressivement diminuer en soirée, avec des températures autour de 20 à 22 °C. Ces valeurs sont des estimations indicatives, établies à partir de la situation prévue et d’ordres de grandeur météorologiques : elles peuvent encore évoluer sensiblement d’ici demain, notamment sur la localisation et l’intensité des orages." },
+      { date: "Prévisions pour le 27/08", text: "Journée fortement instable avec 17 à 19 °C le matin puis 24 à 27 °C avant la dégradation. Le risque d’orage pourrait atteindre environ 60 à 80 %, avec des cellules parfois fortes et organisées. Les précipitations pourraient produire 15 à 30 mm, localement 30 à 50 mm, avec des intensités ponctuelles de 20 à 40 mm/h. Les rafales pourraient atteindre 60 à 80 km/h, voire 80 à 100 km/h sous une cellule particulièrement active. Un risque de grêle de 1 à 3 cm, localement plus grosse, est possible. Une rotation au sein d’une cellule orageuse ne peut pas être totalement exclue, ce qui pourrait théoriquement conduire à un phénomène tourbillonnaire ou à une tornade, mais aucune tornade n’est actuellement prévue ni garantie à Étival-Clairefontaine. Ce scénario reste très incertain et dépendra de la trajectoire et de l’organisation exacte des orages. Météo-France prévoit jeudi un axe orageux violent du Massif central vers la Lorraine, tandis que d’autres sources signalent un risque de tornades à surveiller à l’échelle française.  Toutes les valeurs indiquées sont des estimations et peuvent encore changer d’ici jeudi, parfois fortement." },
+      { date: "Prévisions 28/08", text: "Retour progressif au calme après la dégradation de jeudi, avec un ciel variable alternant passages nuageux et éclaircies. Les températures devraient se situer autour de 14 à 16 °C le matin, puis 21 à 24 °C l’après-midi. Le risque d’averse serait limité, autour de 10 à 25 %, avec des précipitations généralement faibles, de l’ordre de 0 à 5 mm. Le vent devrait rester faible à modéré, autour de 15 à 25 km/h, avec quelques rafales pouvant atteindre 30 à 40 km/h. Aucun épisode orageux majeur n’est envisagé dans ce scénario. La soirée serait plus calme, avec une baisse progressive des températures vers 16 à 18 °C. Ces valeurs restent des estimations et peuvent évoluer d’ici vendredi selon l’évolution de la dégradation de jeudi." }
+    ]
+  },
+
+  archive: {
+    months: [
+      {
+        label: "Août 2026",
+        texts: ["", "", "", "", ""],
+        images: ["", "", "", ""]
+      }
+      // Ajoute ici tes futurs mois, ex :
+      // { label: "Septembre 2026", texts: ["","","","",""], images: ["","","",""] }
+    ]
+  }
+
+};
+
+/* ================================================================
+   Ne rien modifier en dessous de cette ligne.
+================================================================ */
+
+function imgCell(url){
+  const div = document.createElement('div');
+  div.className = 'img-cell';
+  if (url) {
+    const img = document.createElement('img');
+    img.src = url;
+    img.alt = '';
+    div.appendChild(img);
+  }
+  return div;
+}
+
+function renderGrid(containerId, urls, max){
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  for (let i = 0; i < max; i++) el.appendChild(imgCell(urls[i] || ''));
+}
+
+function renderMedia(containerId, url, tag){
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  el.classList.toggle('media--empty', !url);
+  if (tag) {
+    const t = document.createElement('span');
+    t.className = 'media__tag';
+    t.textContent = tag;
+    el.appendChild(t);
+  }
+  if (url) {
+    const img = document.createElement('img');
+    img.src = url;
+    img.alt = '';
+    el.appendChild(img);
+  }
+}
+
+function renderCard(containerId, text, emptyLabel){
+  const el = document.getElementById(containerId);
+  const has = text && text.trim();
+  el.textContent = has ? text : emptyLabel;
+  el.classList.toggle('card--empty', !has);
+}
+
+function renderStackForecast(){
+  const el = document.getElementById('stack-forecast');
+  el.innerHTML = '';
+  CONFIG.forecast3days.images.forEach(url => {
+    const m = document.createElement('div');
+    m.className = 'media' + (url ? '' : ' media--empty');
+    if (url) {
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = '';
+      m.appendChild(img);
+    }
+    el.appendChild(m);
+  });
+}
+
+function renderForecastCards(){
+  const el = document.getElementById('forecast-cards');
+  el.innerHTML = '';
+  CONFIG.forecast3days.days.forEach(d => {
+    const card = document.createElement('div');
+    card.className = 'forecast-card';
+
+    const date = document.createElement('div');
+    date.className = 'forecast-card__date';
+    date.textContent = d.date;
+
+    const text = document.createElement('div');
+    text.className = 'forecast-card__text';
+    const has = d.text && d.text.trim();
+    text.textContent = has ? d.text : 'Prévisions à venir.';
+    if (!has) { text.style.color = 'var(--text-muted)'; text.style.fontStyle = 'italic'; }
+
+    card.appendChild(date);
+    card.appendChild(text);
+    el.appendChild(card);
+  });
+}
+
+function renderArchive(){
+  const el = document.getElementById('archive-grid');
+  el.innerHTML = '';
+  CONFIG.archive.months.forEach((m, idx) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'archive-card';
+    btn.textContent = m.label;
+    btn.addEventListener('click', () => openModal(idx));
+    el.appendChild(btn);
+  });
+}
+
+function openModal(idx){
+  const m = CONFIG.archive.months[idx];
+  document.getElementById('modal-title').textContent = m.label;
+
+  const textsEl = document.getElementById('modal-texts');
+  textsEl.innerHTML = '';
+  m.texts.forEach(t => {
+    const has = t && t.trim();
+    const c = document.createElement('div');
+    c.className = 'card' + (has ? '' : ' card--empty');
+    c.textContent = has ? t : 'Section vide.';
+    textsEl.appendChild(c);
+  });
+
+  const imgsEl = document.getElementById('modal-images');
+  imgsEl.innerHTML = '';
+  for (let i = 0; i < 4; i++) imgsEl.appendChild(imgCell(m.images[i] || ''));
+
+  document.getElementById('modal-overlay').hidden = false;
+}
+
+function closeModal(){
+  document.getElementById('modal-overlay').hidden = true;
+}
+
+document.getElementById('modal-close').addEventListener('click', closeModal);
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target.id === 'modal-overlay') closeModal();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+function renderAll(){
+  document.getElementById('hero-desc').textContent = CONFIG.header.description;
+  document.getElementById('hero-thanks').textContent = CONFIG.header.thanks;
+
+  renderGrid('grid-yesterday', CONFIG.yesterday.images, 4);
+  renderCard('summary-yesterday', CONFIG.yesterday.summary, 'Résumé à venir.');
+
+  renderMedia('media-radar', CONFIG.today.radarImage, 'Carte radars');
+  document.getElementById('radar-updated').textContent = CONFIG.today.radarUpdated;
+  renderCard('summary-today', CONFIG.today.summary, 'Résumé à venir.');
+  renderMedia('media-vigilance', CONFIG.today.vigilanceImage, null);
+
+  renderStackForecast();
+  renderForecastCards();
+  renderArchive();
+}
+
+renderAll();
+</script>
+</body>
+</html>
