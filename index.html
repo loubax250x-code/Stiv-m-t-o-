@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>NEXO AI INFO</title>
+<meta name="description" content="Le briefing quotidien des actualités IA de la veille." />
+<meta name="theme-color" content="#000000" />
+<link rel="manifest" href="./manifest.json" />
+<link rel="icon" href="./icons/icon-192.png" />
+<link rel="apple-touch-icon" href="./icons/icon-192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --noir: #050505;
+    --noir-panneau: #0d0d0d;
+    --blanc: #f5f5f3;
+    --blanc-att: #ffffff;
+    --gris: #8a8a8a;
+    --gris-bordure: #232323;
+    --rouge: #e6392f;
+    --rouge-vif: #ff4438;
+    --marge: 20px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--noir);
+    color: var(--blanc);
+  }
+
+  body {
+    font-family: 'Space Grotesk', sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    padding-bottom: 64px;
+  }
+
+  a { color: inherit; }
+
+  .mono {
+    font-family: 'Space Mono', monospace;
+  }
+
+  header.marque {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 18px var(--marge) 0;
+  }
+
+  header.marque .point {
+    width: 8px;
+    height: 8px;
+    background: var(--rouge);
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  header.marque span {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    color: var(--gris);
+  }
+
+  main {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 0 var(--marge);
+  }
+
+  .entete {
+    padding: 22px 0 18px;
+    border-bottom: 1px solid var(--gris-bordure);
+  }
+
+  .entete .label {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    color: var(--rouge-vif);
+    margin: 0 0 6px;
+  }
+
+  .entete h1 {
+    font-size: clamp(28px, 8vw, 40px);
+    line-height: 1.05;
+    margin: 0 0 14px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .entete .resume {
+    margin: 0;
+    color: var(--blanc-att);
+    font-size: 16px;
+    max-width: 52ch;
+  }
+
+  .entete .resume:empty::before {
+    content: "Chargement du résumé…";
+    color: var(--gris);
+  }
+
+  .panneau {
+    margin-top: 26px;
+    border: 1px solid var(--gris-bordure);
+    border-top: 3px solid var(--rouge);
+    background: var(--noir-panneau);
+    animation: apparition 0.5s ease-out;
+  }
+
+  @keyframes apparition {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .panneau-entete {
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--gris-bordure);
+  }
+
+  .panneau-entete h2 {
+    margin: 0;
+    font-size: 18px;
+    letter-spacing: 0.02em;
+  }
+
+  .actualite {
+    padding: 18px;
+    border-bottom: 1px solid var(--gris-bordure);
+    border-left: 2px solid transparent;
+  }
+
+  .actualite:last-child { border-bottom: none; }
+
+  .actualite:hover { border-left-color: var(--rouge); }
+
+  .actualite h3 {
+    margin: 0 0 6px;
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .actualite p.resume-actu {
+    margin: 0 0 10px;
+    font-size: 15px;
+    color: #d6d6d4;
+  }
+
+  .actualite p.importance {
+    margin: 0 0 10px;
+    font-size: 14px;
+    color: var(--rouge-vif);
+    font-style: italic;
+  }
+
+  .actualite .meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--gris);
+  }
+
+  .actualite .meta a {
+    color: var(--rouge-vif);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(255, 68, 56, 0.4);
+  }
+
+  .actualite .meta a:hover { border-bottom-color: var(--rouge-vif); }
+
+  .etat-vide {
+    padding: 28px 18px;
+    color: var(--gris);
+    font-size: 14px;
+  }
+
+  .images {
+    margin-top: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .images figure {
+    margin: 0;
+    border: 1px solid var(--gris-bordure);
+  }
+
+  .images img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    background: #111;
+  }
+
+  .images figcaption {
+    padding: 8px 12px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--gris);
+    border-top: 1px solid var(--gris-bordure);
+  }
+
+  .images figcaption a { color: var(--gris); }
+
+  .zone-notif {
+    margin-top: 32px;
+    display: flex;
+    justify-content: center;
+  }
+
+  #bouton-notif {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    background: transparent;
+    color: var(--blanc);
+    border: 1px solid var(--gris-bordure);
+    padding: 10px 18px;
+    cursor: pointer;
+  }
+
+  #bouton-notif:hover { border-color: var(--rouge); }
+
+  #bouton-notif[data-etat="active"] { color: var(--rouge-vif); border-color: var(--rouge); }
+
+  footer.pied {
+    max-width: 640px;
+    margin: 40px auto 0;
+    padding: 16px var(--marge) 0;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: #4a4a4a;
+    border-top: 1px solid var(--gris-bordure);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .panneau { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="marque">
+  <span class="point"></span>
+  <span>NEXO AI INFO</span>
+</header>
+
+<main>
+  <section class="entete">
+    <p class="label mono" id="label-du-jour">INFO DU —</p>
+    <h1 id="titre-jour">Chargement…</h1>
+    <p class="resume" id="resume-jour"></p>
+  </section>
+
+  <section class="panneau" id="panneau-briefing" aria-live="polite">
+    <div class="panneau-entete">
+      <h2 id="titre-briefing">—</h2>
+    </div>
+    <div id="liste-actualites"></div>
+  </section>
+
+  <section class="images" id="zone-images"></section>
+
+  <div class="zone-notif">
+    <button id="bouton-notif" type="button">🔔 Activer les notifications</button>
+  </div>
+</main>
+
+<footer class="pied">
+  NEXO AI INFO — briefing automatique, sans recherche à la relecture.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  // Si index.html est hébergé séparément du serveur data.py (ex: GitHub Pages),
+  // renseigner ici l'URL complète du serveur (ex: "https://mon-serveur.exemple.com").
+  // Laisser vide si index.html est servi directement par data.py.
+  const API_BASE = "";
+
+  const $ = (id) => document.getElementById(id);
+
+  function formatDateDuJourFR() {
+    const fmt = new Intl.DateTimeFormat("fr-FR", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+      timeZone: "Europe/Paris",
+    });
+    return fmt.format(new Date()).toUpperCase();
+  }
+
+  function creerElementActualite(actu) {
+    const div = document.createElement("div");
+    div.className = "actualite";
+
+    const h3 = document.createElement("h3");
+    h3.textContent = actu.titre || "Actualité";
+    div.appendChild(h3);
+
+    if (actu.resume) {
+      const p = document.createElement("p");
+      p.className = "resume-actu";
+      p.textContent = actu.resume;
+      div.appendChild(p);
+    }
+
+    if (actu.importance) {
+      const p = document.createElement("p");
+      p.className = "importance";
+      p.textContent = actu.importance;
+      div.appendChild(p);
+    }
+
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    const source = document.createElement("span");
+    source.textContent = actu.source || "";
+    meta.appendChild(source);
+
+    if (actu.url) {
+      const sep = document.createElement("span");
+      sep.textContent = "·";
+      meta.appendChild(sep);
+
+      const lien = document.createElement("a");
+      lien.href = actu.url;
+      lien.target = "_blank";
+      lien.rel = "noopener noreferrer";
+      lien.textContent = "source ↗";
+      meta.appendChild(lien);
+    }
+
+    div.appendChild(meta);
+    return div;
+  }
+
+  function afficherImages(images) {
+    const zone = $("zone-images");
+    zone.innerHTML = "";
+    if (!images || images.length === 0) return;
+
+    images.slice(0, 4).forEach((img) => {
+      if (!img || !img.url) return;
+      const figure = document.createElement("figure");
+
+      const image = document.createElement("img");
+      image.src = img.url;
+      image.alt = "Illustration liée à une actualité IA";
+      image.loading = "lazy";
+      image.onerror = () => figure.remove();
+      figure.appendChild(image);
+
+      if (img.source) {
+        const caption = document.createElement("figcaption");
+        const lien = document.createElement("a");
+        lien.href = img.source;
+        lien.target = "_blank";
+        lien.rel = "noopener noreferrer";
+        try {
+          lien.textContent = new URL(img.source).hostname.replace("www.", "");
+        } catch (e) {
+          lien.textContent = img.source;
+        }
+        caption.appendChild(lien);
+        figure.appendChild(caption);
+      }
+
+      zone.appendChild(figure);
+    });
+  }
+
+  async function chargerBriefing() {
+    $("label-du-jour").textContent = "INFO DU " + formatDateDuJourFR();
+
+    try {
+      const dataUrl = API_BASE ? `${API_BASE}/data.json` : "./data.json";
+      const reponse = await fetch(dataUrl, { cache: "no-store" });
+      if (!reponse.ok) throw new Error("data.json introuvable");
+      const data = await reponse.json();
+
+      $("titre-jour").textContent = data.titre || "Le Briefing IA";
+      $("resume-jour").textContent = data.resume || "";
+      $("titre-briefing").textContent = data.titre || ("INFO DU " + (data.date_analysee || ""));
+
+      const liste = $("liste-actualites");
+      liste.innerHTML = "";
+
+      if (data.actualites && data.actualites.length > 0) {
+        data.actualites.forEach((actu) => liste.appendChild(creerElementActualite(actu)));
+      } else {
+        const vide = document.createElement("p");
+        vide.className = "etat-vide";
+        vide.textContent = data.erreur
+          ? "Le dernier briefing n'a pas pu être régénéré, ceci est le dernier disponible."
+          : "Aucune actualité disponible pour le moment. Revenez après 07h00.";
+        liste.appendChild(vide);
+      }
+
+      afficherImages(data.images);
+    } catch (erreur) {
+      $("titre-jour").textContent = "Le Briefing IA";
+      $("resume-jour").textContent = "Impossible de charger le briefing pour le moment.";
+      console.error("NEXO AI INFO —", erreur);
+    }
+  }
+
+  // --- Notifications Web Push -----------------------------------------
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+    return outputArray;
+  }
+
+  function majEtatBouton() {
+    const bouton = $("bouton-notif");
+    if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+      bouton.textContent = "Notifications non supportées";
+      bouton.disabled = true;
+      return;
+    }
+    if (Notification.permission === "granted") {
+      bouton.textContent = "✅ Notifications activées";
+      bouton.dataset.etat = "active";
+    } else if (Notification.permission === "denied") {
+      bouton.textContent = "🔕 Notifications bloquées par le navigateur";
+      bouton.disabled = true;
+    } else {
+      bouton.textContent = "🔔 Activer les notifications";
+    }
+  }
+
+  async function activerNotifications() {
+    const permission = await Notification.requestPermission();
+    majEtatBouton();
+    if (permission !== "granted") return;
+
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const vapidUrl = API_BASE ? `${API_BASE}/api/vapid-public-key` : "/api/vapid-public-key";
+      const reponseCle = await fetch(vapidUrl);
+      const { publicKey } = await reponseCle.json();
+      if (!publicKey) {
+        console.warn("NEXO AI INFO — clé VAPID non configurée côté serveur.");
+        return;
+      }
+
+      const subscription = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+
+      const subscribeUrl = API_BASE ? `${API_BASE}/api/subscribe` : "/api/subscribe";
+      await fetch(subscribeUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(subscription),
+      });
+    } catch (erreur) {
+      console.error("NEXO AI INFO — abonnement push impossible :", erreur);
+    }
+  }
+
+  $("bouton-notif").addEventListener("click", () => {
+    if (Notification.permission === "granted") return;
+    activerNotifications();
+  });
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./service-worker.js").catch((e) => {
+        console.warn("NEXO AI INFO — service worker non enregistré :", e);
+      });
+    });
+  }
+
+  majEtatBouton();
+  chargerBriefing();
+})();
+</script>
+</body>
+</html>
