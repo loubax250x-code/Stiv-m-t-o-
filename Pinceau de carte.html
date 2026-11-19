@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pinceau de carte</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f4f1ea;--fg:#2b2a27;--card:#fff;--line:#d8d3c6;--acc:#2f7d4f;--accfg:#fff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1d1f1e;--fg:#ecebe6;--card:#2a2d2b;--line:#3d413e;--acc:#5fb583;--accfg:#10231a}}
+:root[data-theme="dark"]{--bg:#1d1f1e;--fg:#ecebe6;--card:#2a2d2b;--line:#3d413e;--acc:#5fb583;--accfg:#10231a}
+html{color-scheme:light dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;padding:10px}
+h1{font-size:17px;margin:0 0 8px}
+#wrap{max-width:720px;margin:0 auto}
+canvas{width:100%;aspect-ratio:1;display:block;border:1px solid var(--line);border-radius:10px;touch-action:none;cursor:crosshair;background:#2a6fb5}
+.row{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0}.grid button{padding:8px 2px;font-size:13px;line-height:1.2}
+button{flex:1;min-width:0;padding:10px 8px;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:8px;font:inherit;cursor:pointer}
+button.on{background:var(--acc);color:var(--accfg);border-color:var(--acc)}
+label{display:flex;align-items:center;gap:8px;margin:6px 0}
+label span{width:92px;flex:none}
+label b{width:34px;text-align:right;font-weight:500;flex:none}
+input[type=range]{flex:1;min-width:0;accent-color:var(--acc)}
+#msg{min-height:20px;font-size:13px;opacity:.8}
+.leg{height:12px;border-radius:6px;margin:6px 0 2px;background:linear-gradient(90deg,#2a6fb5 0 8%,#4ca050 8%,#c8c85a 45%,#966937 75%,#5f4128)}
+.legt{display:flex;justify-content:space-between;font-size:11px;opacity:.7}
+</style>
+</head>
+<body>
+<div id="wrap">
+<h1>🗺️ Pinceau de carte</h1>
+<canvas id="c" width="256" height="256"></canvas>
+<div class="row"><button id="view">👁 Vue : altitude</button></div>
+<div class="grid">
+<button data-t="up" class="on">⬆️ Monter</button>
+<button data-t="down">⬇️ Creuser</button>
+<button data-t="river">🌊 Rivière</button>
+<button data-t="erase">🧽 Effacer rivière</button>
+<button data-t="b0">🟢 Vert<br>10–20°</button>
+<button data-t="b1">🟡 Jaune<br>15–30°</button>
+<button data-t="b2">🔵 Bleu<br>-5–10°</button>
+<button data-t="grad">🎨 Dégradé</button>
+</div>
+<label><span>Taille</span><input id="rad" type="range" min="4" max="40" value="16"><b id="radv">16</b></label>
+<label><span>Force</span><input id="str" type="range" min="1" max="10" value="4"><b id="strv">4</b></label>
+<label><span>Lissage auto</span><input id="smo" type="range" min="0" max="10" value="6"><b id="smov">6</b></label>
+
+<div class="row">
+<button id="smoothAll">Lisser tout</button>
+<button id="undo">↩️ Annuler</button>
+<button id="clear">Tout effacer</button>
+</div>
+<div class="row">
+<button id="dlJson" class="on">⬇ Tout en 1 fichier</button>
+<button id="dlPng">⬇ Image (PNG)</button>
+</div>
+<div id="msg"></div>
+</div>
+
+<script>
+const N=256,SEA=.03,$=id=>document.getElementById(id);
+const BIO=[{id:'vert',tmin:10,tmax:20,lo:[80,165,85],hi:[105,125,80]},{id:'jaune',tmin:15,tmax:30,lo:[228,208,112],hi:[185,145,78]},{id:'bleu',tmin:-5,tmax:10,lo:[190,220,238],hi:[255,255,255]}];
+const H=new Float32Array(N*N),B=new Float32Array(N*N*3),R=new Uint8Array(N*N),TH=new Float32Array(N*N),TB=new Float32Array(N*N*3);
+for(let i=0;i<N*N;i++)B[i*3]=1;
+const cv=$('c'),ctx=cv.getContext('2d'),img=ctx.createImageData(N,N);
+let tool='up',view='alt',undo=[],painting=false,last=null;
+const stops=[[0,[76,160,80]],[.35,[200,200,90]],[.7,[150,105,55]],[1,[95,65,40]]];
+function ramp(t){for(let i=1;i<4;i++)if(t<=stops[i][0]){const a=stops[i-1],b=stops[i],k=(t-a[0])/(b[0]-a[0]);return a[1].map((v,j)=>v+(b[1][j]-v)*k);}return stops[3][1];}
+function render(){
+const d=img.data;
+for(let i=0;i<N*N;i++){
+const h=H[i];let c;
+if(h<SEA)c=[42,111,181];
+else if(R[i])c=[72,142,214];
+else{
+const t=(h-SEA)/(1-SEA);
+if(view==='alt')c=ramp(t);
+else{c=[0,0,0];for(let k=0;k<3;k++){const w=B[i*3+k];if(!w)continue;const u=Math.min(1,t*1.4);for(let j=0;j<3;j++)c[j]+=w*(BIO[k].lo[j]+(BIO[k].hi[j]-BIO[k].lo[j])*u);}}
+const x=i%N,y=(i/N)|0;
+const dx=H[y*N+Math.min(N-1,x+1)]-H[y*N+Math.max(0,x-1)],dy=H[Math.min(N-1,y+1)*N+x]-H[Math.max(0,y-1)*N+x];
+const s=1-(dx+dy)*1.5;c=[c[0]*s,c[1]*s,c[2]*s];}
+d[i*4]=c[0];d[i*4+1]=c[1];d[i*4+2]=c[2];d[i*4+3]=255;}
+ctx.putImageData(img,0,0);}
+function blurH(x0,y0,x1,y1,k,cx,cy,rr){
+TH.set(H);
+for(let y=Math.max(1,y0);y<=Math.min(N-2,y1);y++)for(let x=Math.max(1,x0);x<=Math.min(N-2,x1);x++){
+let w=k;if(rr){const d=Math.hypot(x-cx,y-cy);if(d>rr)continue;w=k*(.5+.5*Math.cos(Math.PI*d/rr));}
+const i=y*N+x,a=(TH[i-1]+TH[i+1]+TH[i-N]+TH[i+N]+TH[i-N-1]+TH[i-N+1]+TH[i+N-1]+TH[i+N+1]+TH[i])/9;
+H[i]=TH[i]+(a-TH[i])*w;}}
+function blurB(cx,cy,r,passes){
+for(let p=0;p<passes;p++){TB.set(B);
+for(let y=Math.max(1,Math.floor(cy-r));y<=Math.min(N-2,cy+r);y++)for(let x=Math.max(1,Math.floor(cx-r));x<=Math.min(N-2,cx+r);x++){
+const d=Math.hypot(x-cx,y-cy);if(d>r)continue;const w=.9*(.5+.5*Math.cos(Math.PI*d/r)),i=y*N+x;
+for(let k=0;k<3;k++){let a=0;for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)a+=TB[(i+dy*N+dx)*3+k];a/=9;B[i*3+k]=TB[i*3+k]+(a-TB[i*3+k])*w;}}}}
+function dab(cx,cy){
+const rs=+$('rad').value,str=+$('str').value,sm=+$('smo').value/10;
+const r=tool==='river'||tool==='erase'?Math.max(1.5,rs*.14):rs;
+for(let y=Math.floor(cy-r);y<=cy+r;y++)for(let x=Math.floor(cx-r);x<=cx+r;x++){
+if(x<0||y<0||x>=N||y>=N)continue;
+const d=Math.hypot(x-cx,y-cy);if(d>r)continue;
+const w=.5+.5*Math.cos(Math.PI*d/r),i=y*N+x;
+if(tool==='up')H[i]=Math.min(1,H[i]+str*.012*w);
+else if(tool==='down')H[i]=Math.max(0,H[i]-str*.012*w);
+else if(tool[0]==='b'){const k=+tool[1];B[i*3+k]+=str*.06*w;const s=B[i*3]+B[i*3+1]+B[i*3+2];for(let j=0;j<3;j++)B[i*3+j]/=s;}
+else if(tool==='river'){if(H[i]>SEA){R[i]=1;H[i]=Math.max(SEA+.004,H[i]-.015*w);}}
+else if(tool==='erase')R[i]=0;}
+if(tool==='up'||tool==='down'){if(sm>0){const m=r+3,a=[Math.floor(cx-m),Math.floor(cy-m),Math.ceil(cx+m),Math.ceil(cy+m)];blurH(...a,sm,cx,cy,m);blurH(...a,sm*.6,cx,cy,m);}}
+else if(tool==='grad')blurB(cx,cy,r,3+Math.round(str/3));}
+const pos=e=>{const r=cv.getBoundingClientRect();return[(e.clientX-r.left)/r.width*N,(e.clientY-r.top)/r.height*N];};
+function stroke(p){
+if(last){const dist=Math.hypot(p[0]-last[0],p[1]-last[1]),step=Math.max(1,+$('rad').value*(tool==='river'?.08:.3)),n=Math.ceil(dist/step);
+for(let i=1;i<=n;i++)dab(last[0]+(p[0]-last[0])*i/n,last[1]+(p[1]-last[1])*i/n);}else dab(p[0],p[1]);
+last=p;render();}
+const snap=()=>{undo.push([H.slice(),B.slice(),R.slice()]);if(undo.length>12)undo.shift();};
+cv.addEventListener('pointerdown',e=>{painting=true;cv.setPointerCapture(e.pointerId);snap();last=null;stroke(pos(e));});
+cv.addEventListener('pointermove',e=>{if(painting)stroke(pos(e));});
+['pointerup','pointercancel'].forEach(t=>cv.addEventListener(t,()=>{painting=false;last=null;}));
+function setView(v){view=v;$('view').textContent='👁 Vue : '+(v==='alt'?'altitude':'biomes');render();}
+document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{tool=b.dataset.t;document.querySelectorAll('[data-t]').forEach(x=>x.classList.toggle('on',x===b));if(/^b|grad/.test(tool))setView('bio');else if(tool==='up'||tool==='down')setView('alt');});
+$('view').onclick=()=>setView(view==='alt'?'bio':'alt');
+['rad','str','smo'].forEach(id=>$(id).oninput=()=>$(id+'v').textContent=$(id).value);
+$('smoothAll').onclick=()=>{snap();for(let i=0;i<3;i++)blurH(1,1,N-2,N-2,.8);render();};
+$('undo').onclick=()=>{if(undo.length){const[a,b,c]=undo.pop();H.set(a);B.set(b);R.set(c);render();}};
+$('clear').onclick=()=>{snap();H.fill(0);R.fill(0);B.fill(0);for(let i=0;i<N*N;i++)B[i*3]=1;render();};
+const say=t=>$('msg').textContent=t;
+async function save(name,data){
+try{const dl=await(window.claude&&claude.use?claude.use('downloads'):null);
+if(dl){const r=await dl.save({filename:name,data});say(r.status==='saved'?'✅ '+name+' enregistré':'✅ envoyé');return;}}
+catch(e){if(e&&e.code==='declined'){say('Téléchargement annulé.');return;}}
+const a=document.createElement('a');a.href=URL.createObjectURL(data instanceof Blob?data:new Blob([data]));a.download=name;a.click();say('✅ '+name);}
+$('dlPng').onclick=()=>{const c=document.createElement('canvas');c.width=c.height=1024;const x=c.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(cv,0,0,1024,1024);c.toBlob(b=>save('ma-carte.png',b),'image/png');};
+$('dlJson').onclick=()=>{
+const w=BIO.map(()=>[]),dom=[],temp=[],riv=[],hs=[];
+for(let i=0;i<N*N;i++){let m=0,t=0;for(let k=0;k<3;k++){const v=B[i*3+k];w[k].push(Math.round(v*100));if(v>B[i*3+m])m=k;t+=v*(BIO[k].tmin+BIO[k].tmax)/2;}
+dom.push(m);temp.push(Math.round(t*10)/10);hs.push(Math.round(H[i]*1000));if(R[i])riv.push(i);}
+const o={format:'carte-pinceau',version:1,size:N,note:'Index i = y*size + x. Altitude 0..1000 (0 = eau, mer sous seaLevel).',seaLevel:Math.round(SEA*1000),
+biomes:BIO.map(b=>({id:b.id,tempMin:b.tmin,tempMax:b.tmax})),
+layers:{altitude:hs,biomeDominant:dom,biomeWeightsPercent:Object.fromEntries(BIO.map((b,k)=>[b.id,w[k]])),temperatureC:temp,riverCells:riv},
+preview:cv.toDataURL('image/png')};
+save('ma-carte.json',JSON.stringify(o));};
+render();
+</script>
+</body>
+</html>
